@@ -90,18 +90,17 @@ export class IDBConnection<
       // Request open database.
       if (typeof window !== 'undefined' && window.indexedDB) {
         this.#request = window.indexedDB.open(name, version);
+
+        // Database successfully opened.
+        this.#request.addEventListener(
+          'success',
+          (ev: any) => (
+            this.#db = ev.target.result,
+            console.log(`Database ${this.#db.name} opened successfully with store ${this.#storeNames.valueOf() as string}`)
+          ),
+          true
+        );
       }
-
-      // Database successfully opened.
-      this.#request.addEventListener(
-        'success',
-        (ev: any) => (
-          this.#db = ev.target.result,
-          console.log(`Database ${this.#db.name} opened successfully with store ${this.#storeNames.valueOf() as string}`)
-        ),
-        true
-      );
-
       // On upgrade needed.
       store && this.onupgradeneeded(store);
     }
