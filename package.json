@@ -1,6 +1,6 @@
 {
   "name": "@typescript-package/indexeddb",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "author": "@typescript-package <sciborrudnicki@wvvw.dev>",
   "homepage": "https://github.com/typescript-package/indexeddb#readme",
   "description": "A TypeScript wrapper for IndexedDB client-side storage.",
