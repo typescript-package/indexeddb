@@ -1,0 +1,57 @@
+{
+  "name": "@typescript-package/indexeddb",
+  "version": "0.0.1",
+  "author": "@typescript-package <sciborrudnicki@wvvw.dev>",
+  "homepage": "https://github.com/typescript-package/indexeddb#readme",
+  "description": "A TypeScript wrapper for IndexedDB client-side storage.",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
+  "peerDependencies": {
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "stylelint": "^15.10.3",
+    "stylelint-config-prettier-scss": "^1.0.0",
+    "stylelint-config-standard-scss": "^11.0.0",
+    "stylelint-order": "^6.0.3",
+    "tslib": "^2.8.1"
+  },
+  "scripts": {
+    "serve": "cd demo && ng serve --host 0.0.0.0 --port 4200",
+    "prepublishOnly": "npm install rimraf && npm run pkg && npm run clean",
+    "pkg": "npm pkg delete dependencies",
+    "clean": "./node_modules/rimraf/dist/esm/bin.mjs ./node_modules && npm pkg delete scripts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/typescript-package/indexeddb.git"
+  },
+  "bugs": {
+    "url": "https://github.com/typescript-package/indexeddb/issues"
+  },
+  "keywords": [
+    "@typescript-package",
+    "IndexedDB"
+  ],
+  "funding": [
+    {
+      "type": "individual",
+      "url": "https://checkout.revolut.com/pay/048b10a3-0e10-42c8-a917-e3e9cb4c8e29"
+    },
+    {
+      "type": "individual",
+      "url": "https://docs.typescript-package.dev/donate/cryptocurrency"
+    },
+    {
+      "type": "patreon",
+      "url": "https://www.patreon.com/angularpackage"
+    },
+    {
+      "type": "github",
+      "url": "https://github.com/sponsors/angular-package"
+    }
+  ]
+}
