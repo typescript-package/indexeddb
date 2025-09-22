@@ -112,16 +112,18 @@ export class IDBConnection<
    * @returns 
    */
   public onupgradeneeded(store: IDBStoreParameters<StoreNames>): this {
-    this.#request.addEventListener('upgradeneeded', (e: any) => (
-      // Grab a reference to the opened database.
-      this.#db = e.target.result as IDBDatabase,
+    if (this.#request) {
+      this.#request.addEventListener('upgradeneeded', (e: any) => (
+        // Grab a reference to the opened database.
+        this.#db = e.target.result as IDBDatabase,
 
-      // Create store.
-      this.createObjectStore(store),
+        // Create store.
+        this.createObjectStore(store),
 
-      // Log.
-      console.log('Database setup complete')
-    ));
+        // Log.
+        console.log('Database setup complete')
+      ));      
+    }
     return this;
   }
 
