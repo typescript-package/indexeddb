@@ -51,6 +51,16 @@ npm install @typescript-package/indexeddb --save-peer
 
 ```typescript
 import {
+  // Class.
+  IDBConnection,
+  IDBData,
+  IDBQuery,
+  IDBStore,
+  IndexedDB,
+
+  // Interface.
+  IDBConfig,
+  IDBStoreInterface
 } from '@typescript-package/indexeddb';
 ```
 
