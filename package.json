@@ -10,7 +10,8 @@
     "registry": "https://registry.npmjs.org"
   },
   "peerDependencies": {
-    "rxjs": "^7.8.2"
+    "@typedly/indexeddb": "^1.0.0",
+    "@typescript-package/promise": "^1.1.0"
   },
   "devDependencies": {
     "stylelint": "^15.10.3",
@@ -38,20 +39,32 @@
   ],
   "funding": [
     {
+      "type": "stripe",
+      "url": "https://donate.stripe.com/dR614hfDZcJE3wAcMM"
+    },
+    {
+      "type": "Donorbox",
+      "url": "https://donorbox.org/become-a-sponsor-to-the-angular-package?default_interval=onetime"
+    },
+    {
+      "type": "Open Collective",
+      "url": "https://opencollective.com/sterblack"
+    },
+    {
+      "type": "Ko-fi",
+      "url": "https://ko-fi.com/sterblack"
+    },
+    {
+      "type": "4Fund",
+      "url": "https://4fund.com/bruubs"
+    },
+    {
+      "type": "paypal",
+      "url": "https://paypal.me/sterblack"
+    },
+    {
       "type": "individual",
       "url": "https://checkout.revolut.com/pay/048b10a3-0e10-42c8-a917-e3e9cb4c8e29"
-    },
-    {
-      "type": "individual",
-      "url": "https://docs.typescript-package.dev/donate/cryptocurrency"
-    },
-    {
-      "type": "patreon",
-      "url": "https://www.patreon.com/angularpackage"
-    },
-    {
-      "type": "github",
-      "url": "https://github.com/sponsors/angular-package"
     }
   ]
 }
