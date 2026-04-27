@@ -1,14 +1,9 @@
-/*
- * Public API Surface of indexeddb
- */
-
 export {
+  // Database
+  DBConnection,
+  // IDB classes
   IDBConnection,
   IDBData,
   IDBQuery,
-  IDBStore,
-  IndexedDB,
+  IndexedDB
 } from './lib';
-
-export type { IDBStoreInterface } from './interface/idb-store.interface'; 
-export type { IDBConfig } from './interface/idb-config.interface';
