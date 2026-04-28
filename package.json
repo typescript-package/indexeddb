@@ -10,7 +10,8 @@
     "registry": "https://registry.npmjs.org"
   },
   "peerDependencies": {
-    "@typedly/indexeddb": "^1.0.0",
+    "@typedly/indexeddb": "^2.2.0",
+    "@typedly/schema": "^2.0.1",
     "@typescript-package/promise": "^1.1.0"
   },
   "devDependencies": {
