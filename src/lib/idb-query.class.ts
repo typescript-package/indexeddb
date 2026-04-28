@@ -1,32 +1,85 @@
-// RxJS.
-import { Observable, of } from 'rxjs';
-
 // Class.
-import { IDBStore } from './idb-store.class';
-
-// Type.
-import { IDBQueryMethod } from '../type/query/idb-query-method.type';
-import { IDBQueryMethod_Store } from '../type/query/idb-query-method-store.type';
-import { IDBQueryStore_Method } from '../type/query/idb-query-store-method.type';
-import { IDBRangeBound } from '../type/query/idb-range-bound.type';
-
-// Interface.
-import { IDBConfig } from '../interface/idb-config.interface';
-
+import { SchemaRecordToType } from '@typedly/schema';
+import { IDBData } from './idb-data.class';
+// Interface & Type.
+import type {
+  IDBQueryMethodToStore,
+  IDBQueryStoreToMethod,
+  IDBQueryTransactionOptions,
+  IDBRangeBound,
+  IDBSchema,
+  IDBStoreQuery,
+  IDBStoresParameters,
+} from '@typedly/indexeddb';
 /**
- * Query store with JSON, by method-store or store-method.
+ * @description
+ * @export
+ * @class IDBQuery
+ * @template {IDBSchema} Schema 
+ * @template {IDBData<Schema, DBName, StoreNames, Version>} DataInstance 
+ * @template {string} [DBName=DataInstance extends IDBData<Schema, infer N, any, any> ? N : string] 
+ * @template {keyof Schema & string} [StoreNames=DataInstance extends IDBData<Schema, any, infer S, any> ? S : keyof Schema & string] 
+ * @template {number} [Version=DataInstance extends IDBData<Schema, any, any, infer V> ? V : number] 
  */
 export class IDBQuery<
-  StoreSchema extends object,
-  Name extends string = string,
-  StoreNames extends keyof StoreSchema = keyof StoreSchema,
-  Version extends number = number
+  DataInstance extends IDBData<Schema, DBName, StoreNames, Version>,
+  Schema extends IDBSchema = DataInstance extends IDBData<infer S, any, any, any> ? S : IDBSchema,
+  DBName extends string = DataInstance extends IDBData<Schema, infer N, any, any> ? N : string,
+  StoreNames extends keyof Schema & string = DataInstance extends IDBData<Schema, any, infer S, any> ? S : keyof Schema & string,
+  Version extends number = DataInstance extends IDBData<Schema, any, any, infer V> ? V : number
 > {
-  /**
-   * 
-   * @param range 
-   * @returns 
-   */
+  public static create<Schema extends IDBSchema, DataType extends boolean = true>(
+    dataType?: DataType,
+  ): <
+      DataInstance extends IDBData<Schema, DBName, StoreNames, Version>,
+      DBName extends string = DataInstance extends IDBData<Schema, infer N, any, any> ? N : string,
+      StoreNames extends keyof Schema & string = DataInstance extends IDBData<Schema, any, infer S, any> ? S : keyof Schema & string,
+      Version extends number = DataInstance extends IDBData<Schema, any, any, infer V> ? V : number
+    >(
+      query?: IDBStoreQuery<Schema, StoreNames>,
+      options?: IDBQueryTransactionOptions,
+      data?: DataType extends true ? DataInstance : {
+        storesParameters: IDBStoresParameters<StoreNames>,
+        connection: {
+          name: DBName,
+          version: Version,
+        }
+      },
+    ) => IDBQuery<DataInstance, Schema, DBName, StoreNames, Version>;
+
+  public static create<const RawSchema extends IDBSchema, DataType extends boolean = true>(
+    dataType?: DataType,
+    _schema?: RawSchema 
+  ): <
+      DataInstance extends IDBData<Schema, DBName, StoreNames, Version>,
+      Schema extends SchemaRecordToType<RawSchema> = SchemaRecordToType<RawSchema>,
+      DBName extends string = DataInstance extends IDBData<Schema, infer N, any, any> ? N : string,
+      StoreNames extends keyof Schema & string = DataInstance extends IDBData<Schema, any, infer S, any> ? S : keyof Schema & string,
+      Version extends number = DataInstance extends IDBData<Schema, any, any, infer V> ? V : number
+    >(
+      query?: IDBStoreQuery<Schema, StoreNames>,
+      options?: IDBQueryTransactionOptions,
+      data?: DataType extends true ? DataInstance : {
+        storesParameters: IDBStoresParameters<StoreNames>,
+        connection: {
+          name: DBName,
+          version: Version,
+        }
+      },
+    ) => IDBQuery<DataInstance, Schema, DBName, StoreNames, Version>;
+
+  public static create(dataType?: boolean, schema?: any) {
+    return (query: any, options: any, data: any) =>
+      new IDBQuery(query, options, data);
+  }
+
+  public get connection() {
+    return this.#data.connection;
+  }
+  public get data() {
+    return this.#data;
+  }
+
   public static range(
     range: IDBRangeBound
   ): IDBKeyRange {
@@ -49,699 +102,665 @@ export class IDBQuery<
       );
     }
   }
+  #data: DataInstance;
 
-  /**
-   * 
-   */
-  public get connection() {
-    return this.#store.connection;
-  }
-
-  /**
-   * 
-   */
-  // TODO:
-  public get objectStore(): IDBStore<StoreSchema, Name, StoreNames, Version> {
-    return this.#store;
-  }
-
-  /**
-   * 
-   */
-  #store!: IDBStore<StoreSchema, Name, StoreNames, Version>;
-
-  /**
-   * 
-   * @param name 
-   * @param storeNames 
-   * @param store 
-   * @param version 
-   */
   constructor(
-    query?: IDBQueryMethod_Store<StoreSchema, StoreNames>,
-    config?: IDBConfig<Name, StoreNames, Version>,
+    query?: IDBStoreQuery<NoInfer<Schema>, StoreNames>,
+    options?: IDBQueryTransactionOptions,
+    data?: {
+      storesParameters: IDBStoresParameters<StoreNames>,
+      connection: {
+        name: DBName,
+        version: Version,
+      }
+    },
+  )
+  constructor(
+    query?: IDBStoreQuery<NoInfer<Schema>, StoreNames>,
+    options?: IDBQueryTransactionOptions,
+    data?: DataInstance,
+  )
+  constructor(
+    query?: IDBStoreQuery<NoInfer<Schema>, StoreNames>,
+    options: IDBQueryTransactionOptions = {},
+    data?: any,
   ) {
-    // super();
-    if (config) {
-      this.#store = new IDBStore(
-        config.name,
-        config.storeNames,
-        config.store,
-        config.version
-      );
-    }
-    query && this.method(query);
+    this.#data = (data instanceof IDBData
+      ? data
+      : new IDBData(
+        data?.storesParameters || {} as IDBStoresParameters<StoreNames>,
+        data?.connection || {} as { name: DBName, version: Version }
+      )) as DataInstance;
+
+    query?.store && this.#queryByStore(query.store, options);
+    query?.method && this.#queryByMethod(query.method, options);
   }
 
-  /**
-   * 
-   * @param param0 
-   * @returns 
-   */
-  public add<StoreName extends StoreNames>(
-    { }: IDBQueryMethod<StoreName, StoreSchema, StoreNames>['add'],
-    complete?: () => void,
-    error?: (err: any) => void,
-    subscribe?: (observable: Observable<{
-        result: IDBValidKey, request: IDBRequest<IDBValidKey>, ev: Event
-      }>) => void
-  ): this {
-    const subscription = of(arguments[0] as IDBQueryMethod<StoreName, StoreSchema, StoreNames>['add'])
-
-    if (subscribe) {
-      subscribe(new Observable<{
-        result: IDBValidKey, request: IDBRequest<IDBValidKey>, ev: Event
-      }>(subscriber => {
-        subscription.subscribe({
-          'next': query => {
-
-            const previousOnSuccess = query.onsuccess;
-            const previousOnError = query.onerror;
-
-            query.onsuccess = (result: IDBValidKey, request: IDBRequest<IDBValidKey>, ev: Event) => {
-              previousOnSuccess && previousOnSuccess(result, request, ev);
-              subscriber.next({result, request, ev});
-            };
-
-            query.onerror = function(this: IDBRequest<IDBValidKey>, ev: Event) {
-              previousOnError && previousOnError.call(this, ev);
-              subscriber.error(ev);
-            };
-
-            this.#add(query);
-          },
-          complete: () => subscriber.complete(),
-          error: (err) => subscriber.error(err)
-        });
-      }));
-    }
-    else {
-      subscription.subscribe({
-        'next': query => this.#add(query),
-        complete,
-        error
-      });
-    }
-    return this;
-  }
-
-  /**
-   * 
-   * @param param0 
-   * @returns 
-   */
-  public clear<StoreName extends StoreNames>(
-    { }: IDBQueryMethod<StoreName, StoreSchema, StoreNames>['clear'],
-    complete?: () => void,
-    error?: (err: any) => void,
-  ): this {
-    of(arguments[0] as IDBQueryMethod<StoreName, StoreSchema, StoreNames>['clear'])
-      .subscribe({
-        next: query => this.#clear(query),
-        complete,
-        error
-      })
-    return this;
-  }
-
-  /**
-   * 
-   * @param param0 
-   * @returns 
-   */
-  public count<StoreName extends StoreNames>(
-    { }: IDBQueryMethod<StoreName, StoreSchema, StoreNames>['count'],
-    complete?: () => void,
-    error?: (err: any) => void,
-  ): this {
-    of(arguments[0] as IDBQueryMethod<StoreName, StoreSchema, StoreNames>['count'])
-      .subscribe({
-        next: query => this.#count(query),
-        complete,
-        error
-      })
-    return this;
-  }
-
-  /**
-   * 
-   * @param param0 
-   * @returns 
-   */
-  public delete<StoreName extends StoreNames>(
-    { }: IDBQueryMethod<StoreName, StoreSchema, StoreNames>['delete'],
-    complete?: () => void,
-    error?: (err: any) => void,
-  ): this {
-    of(arguments[0] as IDBQueryMethod<StoreName, StoreSchema, StoreNames>['delete'])
-      .subscribe({
-        next: query => this.#delete(query),
-        complete,
-        error
-      })
-    return this;
-  }
-
-  /**
-   * 
-   * @param param0 
-   * @returns 
-   */
-  public get<StoreName extends StoreNames>(
-    { }: IDBQueryMethod<StoreName, StoreSchema, StoreNames>['get'],
-    complete?: () => void,
-    error?: (err: any) => void,
-  ): this {
-    of(arguments[0] as IDBQueryMethod<StoreName, StoreSchema, StoreNames>['get'])
-      .subscribe({
-        next: query => this.#get(query),
-        complete,
-        error
-      })
-    return this;
-  }
-
-  /**
-   * 
-   * @param param0 
-   * @returns 
-   */
-  public getAll<StoreName extends StoreNames>(
-    { }: IDBQueryMethod<StoreName, StoreSchema, StoreNames>['getAll'],
-    complete?: () => void,
-    error?: (err: any) => void,
-  ): this {
-    of(arguments[0] as IDBQueryMethod<StoreName, StoreSchema, StoreNames>['getAll'])
-      .subscribe({
-        next: query => this.#getAll(query),
-        complete,
-        error
-      })
-    return this;
-  }
-
-  /**
-   * 
-   * @param param0 
-   * @returns 
-   */
-  public index<StoreName extends StoreNames>(
-    { }: IDBQueryMethod<StoreName, StoreSchema, StoreNames>['index'],
-    complete?: () => void,
-    error?: (err: any) => void,
-  ): this {
-    of(arguments[0] as IDBQueryMethod<StoreName, StoreSchema, StoreNames>['index'])
-      .subscribe({
-        next: query => this.#index(query),
-        complete,
-        error
-      })
-    return this;
-  }
-
-  /**
-   * 
-   * @param param0 
-   * @returns 
-   */
-  public openCursor<StoreName extends StoreNames>(
-    { }: IDBQueryMethod<StoreName, StoreSchema, StoreNames>['openCursor'],
-    complete?: () => void,
-    error?: (err: any) => void | undefined,
-  ): this {
-    of(arguments[0] as IDBQueryMethod<StoreName, StoreSchema, StoreNames>['openCursor'])
-      .subscribe({
-        next: query => this.#openCursor(query),
-        complete,
-        error
-      })
-    return this;
-  }
-
-  /**
-   * 
-   * @param param0 
-   * @returns 
-   */
-  public put<StoreName extends StoreNames>(
-    { }: IDBQueryMethod<StoreName, StoreSchema, StoreNames>['put'],
-    complete?: () => void,
-    error?: (err: any) => void,
-  ): this {
-    of(arguments[0] as IDBQueryMethod<StoreName, StoreSchema, StoreNames>['put'])
-      .subscribe({
-        next: query => this.#put(query),
-        complete,
-        error
-      })
-    return this;
-  }
-
-  /**
-   * 
-   */
-  public method(
-    { }: IDBQueryMethod_Store<StoreSchema, StoreNames>,
-    complete?: () => void,
-    error?: (err: any) => void,
-  ): this {
-    of(arguments[0] as IDBQueryMethod_Store<StoreSchema, StoreNames>)
-      .subscribe({
-        next: query => 
-          this.#queryMethod(query, method => {
-            if (query[method]) {
-              const queryStore = query[method];
-              if (queryStore) {
-                (Object
-                  .keys(queryStore) as Array<keyof typeof queryStore>)
-                  .forEach(storeName => {
-                    this.#performMethod(method, {
-                      ...{ storeName },
-                      ...queryStore[storeName]
-                    } as any)
-                  });
-              }
-            }
-          }
-        ),
-        complete,
-        error
-      })
-    return this;
-  }
-
-  /**
-   * 
-   * @param param0 
-   * @returns 
-   */
-  public store<StoreName extends StoreNames>(
-    { }: IDBQueryStore_Method<StoreName, StoreSchema, StoreNames>,
-    complete?: () => void,
-    error?: (err: any) => void,
+  async store<StoreName extends StoreNames>(
+    name: StoreName,
+    query: IDBQueryStoreToMethod<NoInfer<Schema>, StoreName>[StoreName],
+    options: IDBQueryTransactionOptions = {}
   ) {
-    of(arguments[0] as IDBQueryStore_Method<StoreName, StoreSchema, StoreNames>)
-      .subscribe({
-        next: query => 
-          this.#queryStore(query, storeName => {
-            const queryMethod = query[storeName];
-            if (queryMethod) {
-              Object
-                .entries(queryMethod)
-                .forEach(([method, query]) =>
-                  this.#performMethod(
-                    method as any, {
-                      ...{ storeName },
-                      ...query
-                    }
-                  )
-                );
-            }
-          }
-        ),
-        complete,
-        error
-      })
-    return this;
-  }
-
-  /**
-   * 
-   * @param param0 
-   * @returns 
-   */
-  #add<StoreName extends StoreNames = StoreNames>({
-    storeName,
-    value,
-    key,
-
-    // Request.
-    onsuccess,
-    onerror,
-
-    // Transaction.
-    transaction,
-
-    // Subscribe.
-    complete,
-    error,
-
-    // Store.
-    storeNames = this.#store.connection.storeNames,
-    mode = "readwrite"
-  }: IDBQueryMethod<StoreName, StoreSchema, StoreNames>['add'],
-  ): this {
-    this.#store.add(
-      storeName,
-      value,
-      key,
-      onsuccess,
-      onerror,
-      transaction,
-      complete,
-      error,
-      storeNames,
-      mode
+    return this.#queryByStore(
+      { [name]: query } as IDBQueryStoreToMethod<Schema, StoreName, StoreNames>,
+      options
     );
-    return this;
   }
 
-  /**
-   * 
-   * @param param0 
-   * @returns 
-   */
-  #clear<StoreName extends StoreNames>({
-    storeName,
-
-    // Request.
-    onsuccess,
-    onerror,
-
-    // Transaction.
-    transaction,
-
-    // Store.
-    storeNames = this.#store.connection.storeNames,
-    mode = "readwrite"
-  }: IDBQueryMethod<StoreName, StoreSchema, StoreNames>['clear']
-  ): this {
-    this.#store.clear(
-      storeName,
-      onsuccess,
-      onerror,
-      transaction,
-      storeNames,
-      mode
+  async add<StoreName extends StoreNames>(
+    query: IDBQueryMethodToStore<NoInfer<Schema>, StoreName>['add'],
+    options: IDBQueryTransactionOptions = {}
+  ) {
+    return this.#queryByMethod(
+      { ['add']: query } as IDBQueryMethodToStore<Schema, StoreName>,
+      options
     );
-    return this;
   }
 
-  /**
-   * 
-   * @param param0 
-   * @returns 
-   */
-  #count<StoreName extends StoreNames>({
-    storeName,
-    query,
-    key,
-    range,
-
-    // Request.
-    onsuccess,
-    onerror,
-
-    // Transaction.
-    transaction,
-
-    // Store.
-    storeNames = this.#store.connection.storeNames,
-    mode = "readwrite"
-  }: IDBQueryMethod<StoreName, StoreSchema, StoreNames>['count']
-  ): this {
-    this.#store.count(
-      storeName,
-      query || key || range && IDBQuery.range(range),
-      onsuccess,
-      onerror,
-      transaction,
-      storeNames,
-      mode
+  async clear<StoreName extends StoreNames>(
+    query: IDBQueryMethodToStore<NoInfer<Schema>, StoreName>['clear'],
+    options: IDBQueryTransactionOptions = {}
+  ) {
+    return this.#queryByMethod(
+      { ['clear']: query } as IDBQueryMethodToStore<Schema, StoreName>,
+      options
     );
-    return this;
   }
 
-  /**
-   * 
-   * @param param0 
-   * @returns 
-   */
-  #delete<StoreName extends StoreNames>({
-    storeName,
-    query,
-    key,
-    range,
-
-    // Request.
-    onsuccess,
-    onerror,
-
-    // Transaction handlers.
-    transaction,
-
-    // Store.
-    storeNames = this.#store.connection.storeNames,
-    mode = "readwrite"
-  }: IDBQueryMethod<StoreName, StoreSchema, StoreNames>['delete']
-  ): this {
-    const deleteQuery = query || key || range && IDBQuery.range(range);
-    if (deleteQuery) {
-      this.#store.delete(
-        storeName,
-        deleteQuery,
-        onsuccess,
-        onerror,
-        transaction,
-        storeNames,
-        mode
-      );
-    }
-    return this;
-  }
-
-  /**
-   * 
-   * @param param0 
-   * @returns 
-   */
-  #get<StoreName extends StoreNames>({
-    storeName,
-    query,
-    key,
-    range,
-
-    // Request.
-    onsuccess,
-    onerror,
-
-    // Transaction.
-    transaction,
-
-    // Store.
-    storeNames = this.#store.connection.storeNames,
-    mode = "readonly"
-  }: IDBQueryMethod<StoreName, StoreSchema, StoreNames>['get']
-  ): this {
-    const getQuery = query || key || range && IDBQuery.range(range);
-    if (getQuery) {
-      this.#store.get(
-        storeName,
-        getQuery,
-        onsuccess,
-        onerror,
-        transaction,
-        storeNames,
-        mode
-      );
-    }
-    return this;
-  }
-
-  /**
-   * 
-   * @param param0 
-   * @returns 
-   */
-  #getAll<StoreName extends StoreNames>({
-    storeName,
-    query,
-    count,
-    key,
-    range,
-
-    // Request.
-    onsuccess,
-    onerror,
-
-    // Transaction.
-    transaction,
-
-    // Store.
-    storeNames = this.#store.connection.storeNames,
-    mode = "readonly"
-  }: IDBQueryMethod<StoreName, StoreSchema, StoreNames>['getAll']
-  ): this {
-    this.#store.getAll(
-      storeName,
-      query || key || range && IDBQuery.range(range),
-      count,
-      onsuccess,
-      onerror,
-      transaction,
-      storeNames,
-      mode
+  async count<StoreName extends StoreNames>(
+    query: IDBQueryMethodToStore<NoInfer<Schema>, StoreName>['count'],
+    options: IDBQueryTransactionOptions = {}
+  ) {
+    return this.#queryByMethod(
+      { ['count']: query } as IDBQueryMethodToStore<Schema, StoreName>,
+      options
     );
-    return this;
   }
 
-  /**
-   * 
-   * @param param0 
-   * @returns 
-   */
-  #index<StoreName extends StoreNames>({
-    storeName,
-    name,
-
-    // Request.
-    onsuccess,
-
-    // Transaction handlers.
-    transaction,
-
-    // Store.
-    storeNames = this.#store.connection.storeNames,
-    mode = "readwrite"
-  }: IDBQueryMethod<StoreName, StoreSchema, StoreNames>['index']
-  ): this {
-    this.#store.index(
-      storeName,
-      name,
-      onsuccess,
-      transaction,
-      storeNames,
-      mode
+  async delete<StoreName extends StoreNames>(
+    query: IDBQueryMethodToStore<NoInfer<Schema>, StoreName>['delete'],
+    options: IDBQueryTransactionOptions = {}
+  ) {
+    return this.#queryByMethod(
+      { ['delete']: query } as IDBQueryMethodToStore<Schema, StoreName>,
+      options
     );
-    return this;
   }
 
-  /**
-   * 
-   * @param param0 
-   * @returns 
-   */
-  #openCursor<StoreName extends StoreNames>({
-    storeName,
-    query,
-    direction,
-    key,
-    range,
-
-    // Request.
-    onsuccess,
-    onerror,
-
-    // Transaction.
-    transaction,
-
-    // Store.
-    storeNames = this.#store.connection.storeNames,
-    mode = "readwrite"
-  }: IDBQueryMethod<StoreName, StoreSchema, StoreNames>['openCursor']
-  ): this {
-    this.#store.openCursor(
-      storeName,
-      query || key || range && IDBQuery.range(range),
-      direction,
-      onsuccess,
-      onerror,
-      transaction,
-      storeNames,
-      mode
+  async get<StoreName extends StoreNames>(
+    query: IDBQueryMethodToStore<NoInfer<Schema>, StoreName>['get'],
+    options: IDBQueryTransactionOptions = {}
+  ) {
+    return this.#queryByMethod(
+      { ['get']: query } as IDBQueryMethodToStore<Schema, StoreName>,
+      options
     );
-    return this;
   }
 
-  /**
-   * 
-   * @param methodName 
-   * @param query 
-   */
-  #performMethod<
-    MethodName extends keyof IDBQueryMethod<StoreName, StoreSchema, StoreNames>,
-    StoreName extends StoreNames
+  async getAll<StoreName extends StoreNames>(
+    query: IDBQueryMethodToStore<NoInfer<Schema>, StoreName>['getAll'],
+    options: IDBQueryTransactionOptions = {}
+  ) {
+    return this.#queryByMethod(
+      { ['getAll']: query } as IDBQueryMethodToStore<Schema, StoreName>,
+      options
+    );
+  }
+
+  async index<StoreName extends StoreNames>(
+    query: IDBQueryMethodToStore<NoInfer<Schema>, StoreName>['index'],
+    options: IDBQueryTransactionOptions = {}
+  ) {
+    return this.#queryByMethod(
+      { ['index']: query } as IDBQueryMethodToStore<Schema, StoreName>,
+      options
+    );
+  }
+
+  async method<
+    StoreName extends StoreNames,
+    MethodName extends keyof IDBQueryMethodToStore<Schema, StoreName>
   >(
-    methodName: MethodName,
-    query: IDBQueryMethod<StoreName, StoreSchema, StoreNames>[MethodName]
+    name: MethodName,
+    query: IDBQueryMethodToStore<NoInfer<Schema>, StoreName>[MethodName],
+    options: IDBQueryTransactionOptions = {}
   ) {
-    switch (methodName) {
-      case 'add': this.#add(query as any); break;
-      case 'clear': this.#clear(query as any); break;
-      case 'count': this.#count(query as any) as any; break;
-      case 'delete': this.#delete(query as any); break;
-      case 'get': this.#get(query as any); break;
-      case 'getAll': this.#getAll(query as any); break;
-      case 'index': this.#index(query as any); break;
-      case 'openCursor': this.#openCursor(query as any); break;
-      case 'put': this.#put(query as any); break;
+    return this.#queryByMethod(
+      { [name]: query } as IDBQueryMethodToStore<Schema, StoreName>,
+      options
+    );
+  }
+
+  async openCursor<StoreName extends StoreNames>(
+    query: IDBQueryMethodToStore<NoInfer<Schema>, StoreName>['openCursor'],
+    options: IDBQueryTransactionOptions = {}
+  ) {
+    return this.#queryByMethod(
+      { ['openCursor']: query } as IDBQueryMethodToStore<Schema, StoreName>,
+      options
+    );
+  }
+
+  async put<StoreName extends StoreNames>(
+    query: IDBQueryMethodToStore<NoInfer<Schema>, StoreName>['put'],
+    options: IDBQueryTransactionOptions = {}
+  ) {
+    return this.#queryByMethod(
+      { ['put']: query } as IDBQueryMethodToStore<Schema, StoreName>,
+      options
+    );
+  }
+
+  async #dispatch<StoreName extends StoreNames>(
+    store: IDBObjectStore,
+    operations: IDBQueryStoreToMethod<NoInfer<Schema>, StoreName, StoreNames>[StoreName]
+  ) {
+    for(const operationName in operations) {
+      switch(operationName) {
+        case 'add': for (const item of this.#toArray(operations.add)) this.#bind(store.add(item.value, item.key), item); break;
+        case 'put': for (const item of this.#toArray(operations.put)) this.#bind(store.put(item.value, item.key), item); break;
+        case 'clear': for (const item of this.#toArray(operations.clear)) this.#bind(store.clear(), item); break;
+        case 'count': for (const item of this.#toArray(operations.count)) this.#bind(store.count(item.query), item); break;
+        case 'delete': for (const item of this.#toArray(operations.delete)) this.#bind(store.delete(item.query), item); break;
+        case 'get': for (const item of this.#toArray(operations.get)) this.#bind(store.get(item.query), item); break;
+        case 'getAll': for (const item of this.#toArray(operations.getAll)) this.#bind(store.getAll(item.query, item.count), item); break;
+        case 'getKey': for (const item of this.#toArray(operations.getKey)) this.#bind(store.getKey(item.query), item); break;
+        case 'getAllKeys': for (const item of this.#toArray(operations.getAllKeys)) this.#bind(store.getAllKeys(item.query, item.count), item); break;
+        case 'index': for (const item of this.#toArray(operations.index)) store.index(item.name); break;
+        case 'openCursor': for (const item of this.#toArray(operations.openCursor)) this.#bind(store.openCursor(item.query, item.direction), item); break;
+        case 'openKeyCursor': for (const item of this.#toArray(operations.openKeyCursor)) this.#bind(store.openKeyCursor(item.query, item.direction), item); break;
+      }
     }
   }
 
-  /**
-   * 
-   * @param param0 
-   * @returns 
-   */
-  #put<StoreName extends StoreNames>({
-    storeName,
-    value,
-    key,
+  async #queryByMethod<StoreName extends StoreNames>(
+    query: IDBQueryMethodToStore<NoInfer<Schema>, StoreName>,
+    options: IDBQueryTransactionOptions = {}
+  ) {
+    // collect all referenced stores across methods
+    const storeSet = new Set<StoreName>();
 
-    // Request.
-    onsuccess,
-    onerror,
+    for (const methodName in query) {
+      const byStore = query[methodName as keyof typeof query];
+      if (!byStore) continue;
 
-    // Transaction.
-    transaction,
+      for (const storeName in byStore) storeSet.add(storeName as StoreName);
+    }
 
-    // Store.
-    storeNames = this.#store.connection.storeNames,
-    mode = "readwrite"
-  }: IDBQueryMethod<StoreName, StoreSchema, StoreNames>['put']
-  ): this {
-    this.#store.put(
-      storeName,
-      value,
-      key,
-      onsuccess,
-      onerror,
-      transaction,
-      storeNames,
-      mode
-    );
-    return this;
+    const storeNames = [...storeSet];
+    const { done, stores, transaction } = await this.#data.openStores(storeNames, options);
+
+    // preserve method declaration order
+    for (const methodName in query) {
+      const byStore = query[methodName as keyof typeof query];
+      if (!byStore) continue;
+
+      // preserve store order inside this method block
+      for (const storeName in byStore) {
+        const typedStoreName = storeName as StoreName;
+        const operations = byStore[typedStoreName];
+        if (!operations) continue;
+
+        // operations is IDBQueryStoreToMethod[...] shape for a single store
+        this.#dispatch(stores[typedStoreName], {[methodName]: operations});
+      }
+    }
+    await done;
+    return { transaction, done };
   }
 
-  /**
-   * 
-   * @param query 
-   * @param callbackfn 
-   * @returns 
-   */
-  #queryMethod(
-    query: IDBQueryMethod_Store<StoreSchema, StoreNames>,
-    callbackfn: (method: keyof IDBQueryMethod_Store<StoreSchema, StoreNames>) => any
-  ): this {
-    (Object
-      .keys(query) as Array<keyof IDBQueryMethod_Store<StoreSchema, StoreNames>>)
-      .forEach(callbackfn);
-    return this;
+  async #queryByStore<StoreName extends StoreNames>(
+    query: IDBQueryStoreToMethod<Schema, StoreName, StoreNames>,
+    options: IDBQueryTransactionOptions = {}
+  ) {
+    const storeNames = Object.keys(query) as StoreName[];
+    const { done, stores, transaction } = await this.#data.openStores(storeNames, options);
+    for (const storeName of storeNames) this.#dispatch(stores[storeName], query[storeName]!);
+    await done;
+    return { transaction, done };
   }
 
-  /**
-   * 
-   * @param query 
-   * @param callbackfn 
-   * @returns 
-   */
-  #queryStore<StoreName extends StoreNames>(
-    query: IDBQueryStore_Method<StoreName, StoreSchema, StoreNames>,
-    callbackfn: (storeName: keyof IDBQueryStore_Method<StoreName, StoreSchema, StoreNames>) => any
-  ): this {
-    (Object
-      .keys(query) as Array<keyof IDBQueryStore_Method<StoreName, StoreSchema, StoreNames>>)
-      .forEach(callbackfn);
-    return this;
+  #bind<R>(
+    request: IDBRequest<R>,
+    item: { onsuccess?: (this: IDBRequest<any>, ev: Event) => any;  onerror?: (this: IDBRequest<any>, ev: Event) => any }
+  ): void {
+    if (item.onsuccess) request.addEventListener('success', item.onsuccess, { once: true });
+    if (item.onerror) request.addEventListener('error', item.onerror, { once: true });
+  };
+  
+  #toArray<T>(v: T | T[] | undefined): T[] {
+    return v == null ? [] : Array.isArray(v) ? v : [v];
   }
 }
+
+
+// // RxJS.
+// import { Observable, of } from 'rxjs';
+
+// // Class.
+// import { IDBStore } from './idb-store.class';
+
+// // Type.
+// import { IDBQueryMethod } from '../type/query/idb-query-method.type';
+// import { IDBQueryMethod_Store } from '../type/query/idb-query-method-store.type';
+// import { IDBQueryStore_Method } from '../type/query/idb-query-store-method.type';
+// import { IDBRangeBound } from '../type/query/idb-range-bound.type';
+
+// // Interface.
+// import { IDBConfig } from '../interface/idb-config.interface';
+
+/**
+ * Query store with JSON, by method-store or store-method.
+ */
+// export class IDBQuery1<
+//   StoreSchema extends object,
+//   Name extends string = string,
+//   StoreNames extends keyof StoreSchema = keyof StoreSchema,
+//   Version extends number = number
+// > {
+
+
+//   /**
+//    * 
+//    * @param name 
+//    * @param storeNames 
+//    * @param store 
+//    * @param version 
+//    */
+//   constructor(
+//     query?: IDBQueryMethod_Store<StoreSchema, StoreNames>,
+//     config?: IDBConfig<Name, StoreNames, Version>,
+//   ) {
+//     // super();
+//     if (config) {
+//       this.#store = new IDBStore(
+//         config.name,
+//         config.storeNames,
+//         config.store,
+//         config.version
+//       );
+//     }
+//     query && this.method(query);
+//   }
+
+
+//   /**
+//    * 
+//    * @param param0 
+//    * @returns 
+//    */
+//   #add<StoreName extends StoreNames = StoreNames>({
+//     storeName,
+//     value,
+//     key,
+
+//     // Request.
+//     onsuccess,
+//     onerror,
+
+//     // Transaction.
+//     transaction,
+
+//     // Subscribe.
+//     complete,
+//     error,
+
+//     // Store.
+//     storeNames = this.#store.connection.storeNames,
+//     mode = "readwrite"
+//   }: IDBQueryMethod<StoreName, StoreSchema, StoreNames>['add'],
+//   ): this {
+//     this.#store.add(
+//       storeName,
+//       value,
+//       key,
+//       onsuccess,
+//       onerror,
+//       transaction,
+//       complete,
+//       error,
+//       storeNames,
+//       mode
+//     );
+//     return this;
+//   }
+
+//   /**
+//    * 
+//    * @param param0 
+//    * @returns 
+//    */
+//   #clear<StoreName extends StoreNames>({
+//     storeName,
+
+//     // Request.
+//     onsuccess,
+//     onerror,
+
+//     // Transaction.
+//     transaction,
+
+//     // Store.
+//     storeNames = this.#store.connection.storeNames,
+//     mode = "readwrite"
+//   }: IDBQueryMethod<StoreName, StoreSchema, StoreNames>['clear']
+//   ): this {
+//     this.#store.clear(
+//       storeName,
+//       onsuccess,
+//       onerror,
+//       transaction,
+//       storeNames,
+//       mode
+//     );
+//     return this;
+//   }
+
+//   /**
+//    * 
+//    * @param param0 
+//    * @returns 
+//    */
+//   #count<StoreName extends StoreNames>({
+//     storeName,
+//     query,
+//     key,
+//     range,
+
+//     // Request.
+//     onsuccess,
+//     onerror,
+
+//     // Transaction.
+//     transaction,
+
+//     // Store.
+//     storeNames = this.#store.connection.storeNames,
+//     mode = "readwrite"
+//   }: IDBQueryMethod<StoreName, StoreSchema, StoreNames>['count']
+//   ): this {
+//     this.#store.count(
+//       storeName,
+//       query || key || range && IDBQuery.range(range),
+//       onsuccess,
+//       onerror,
+//       transaction,
+//       storeNames,
+//       mode
+//     );
+//     return this;
+//   }
+
+//   /**
+//    * 
+//    * @param param0 
+//    * @returns 
+//    */
+//   #delete<StoreName extends StoreNames>({
+//     storeName,
+//     query,
+//     key,
+//     range,
+
+//     // Request.
+//     onsuccess,
+//     onerror,
+
+//     // Transaction handlers.
+//     transaction,
+
+//     // Store.
+//     storeNames = this.#store.connection.storeNames,
+//     mode = "readwrite"
+//   }: IDBQueryMethod<StoreName, StoreSchema, StoreNames>['delete']
+//   ): this {
+//     const deleteQuery = query || key || range && IDBQuery.range(range);
+//     if (deleteQuery) {
+//       this.#store.delete(
+//         storeName,
+//         deleteQuery,
+//         onsuccess,
+//         onerror,
+//         transaction,
+//         storeNames,
+//         mode
+//       );
+//     }
+//     return this;
+//   }
+
+//   /**
+//    * 
+//    * @param param0 
+//    * @returns 
+//    */
+//   #get<StoreName extends StoreNames>({
+//     storeName,
+//     query,
+//     key,
+//     range,
+
+//     // Request.
+//     onsuccess,
+//     onerror,
+
+//     // Transaction.
+//     transaction,
+
+//     // Store.
+//     storeNames = this.#store.connection.storeNames,
+//     mode = "readonly"
+//   }: IDBQueryMethod<StoreName, StoreSchema, StoreNames>['get']
+//   ): this {
+//     const getQuery = query || key || range && IDBQuery.range(range);
+//     if (getQuery) {
+//       this.#store.get(
+//         storeName,
+//         getQuery,
+//         onsuccess,
+//         onerror,
+//         transaction,
+//         storeNames,
+//         mode
+//       );
+//     }
+//     return this;
+//   }
+
+//   /**
+//    * 
+//    * @param param0 
+//    * @returns 
+//    */
+//   #getAll<StoreName extends StoreNames>({
+//     storeName,
+//     query,
+//     count,
+//     key,
+//     range,
+
+//     // Request.
+//     onsuccess,
+//     onerror,
+
+//     // Transaction.
+//     transaction,
+
+//     // Store.
+//     storeNames = this.#store.connection.storeNames,
+//     mode = "readonly"
+//   }: IDBQueryMethod<StoreName, StoreSchema, StoreNames>['getAll']
+//   ): this {
+//     this.#store.getAll(
+//       storeName,
+//       query || key || range && IDBQuery.range(range),
+//       count,
+//       onsuccess,
+//       onerror,
+//       transaction,
+//       storeNames,
+//       mode
+//     );
+//     return this;
+//   }
+
+//   /**
+//    * 
+//    * @param param0 
+//    * @returns 
+//    */
+//   #index<StoreName extends StoreNames>({
+//     storeName,
+//     name,
+
+//     // Request.
+//     onsuccess,
+
+//     // Transaction handlers.
+//     transaction,
+
+//     // Store.
+//     storeNames = this.#store.connection.storeNames,
+//     mode = "readwrite"
+//   }: IDBQueryMethod<StoreName, StoreSchema, StoreNames>['index']
+//   ): this {
+//     this.#store.index(
+//       storeName,
+//       name,
+//       onsuccess,
+//       transaction,
+//       storeNames,
+//       mode
+//     );
+//     return this;
+//   }
+
+//   /**
+//    * 
+//    * @param param0 
+//    * @returns 
+//    */
+//   #openCursor<StoreName extends StoreNames>({
+//     storeName,
+//     query,
+//     direction,
+//     key,
+//     range,
+
+//     // Request.
+//     onsuccess,
+//     onerror,
+
+//     // Transaction.
+//     transaction,
+
+//     // Store.
+//     storeNames = this.#store.connection.storeNames,
+//     mode = "readwrite"
+//   }: IDBQueryMethod<StoreName, StoreSchema, StoreNames>['openCursor']
+//   ): this {
+//     this.#store.openCursor(
+//       storeName,
+//       query || key || range && IDBQuery.range(range),
+//       direction,
+//       onsuccess,
+//       onerror,
+//       transaction,
+//       storeNames,
+//       mode
+//     );
+//     return this;
+//   }
+
+//   /**
+//    * 
+//    * @param methodName 
+//    * @param query 
+//    */
+//   #performMethod<
+//     MethodName extends keyof IDBQueryMethod<StoreName, StoreSchema, StoreNames>,
+//     StoreName extends StoreNames
+//   >(
+//     methodName: MethodName,
+//     query: IDBQueryMethod<StoreName, StoreSchema, StoreNames>[MethodName]
+//   ) {
+//     switch (methodName) {
+//       case 'add': this.#add(query as any); break;
+//       case 'clear': this.#clear(query as any); break;
+//       case 'count': this.#count(query as any) as any; break;
+//       case 'delete': this.#delete(query as any); break;
+//       case 'get': this.#get(query as any); break;
+//       case 'getAll': this.#getAll(query as any); break;
+//       case 'index': this.#index(query as any); break;
+//       case 'openCursor': this.#openCursor(query as any); break;
+//       case 'put': this.#put(query as any); break;
+//     }
+//   }
+
+//   /**
+//    * 
+//    * @param param0 
+//    * @returns 
+//    */
+//   #put<StoreName extends StoreNames>({
+//     storeName,
+//     value,
+//     key,
+
+//     // Request.
+//     onsuccess,
+//     onerror,
+
+//     // Transaction.
+//     transaction,
+
+//     // Store.
+//     storeNames = this.#store.connection.storeNames,
+//     mode = "readwrite"
+//   }: IDBQueryMethod<StoreName, StoreSchema, StoreNames>['put']
+//   ): this {
+//     this.#store.put(
+//       storeName,
+//       value,
+//       key,
+//       onsuccess,
+//       onerror,
+//       transaction,
+//       storeNames,
+//       mode
+//     );
+//     return this;
+//   }
+
+//   /**
+//    * 
+//    * @param query 
+//    * @param callbackfn 
+//    * @returns 
+//    */
+//   #queryMethod(
+//     query: IDBQueryMethod_Store<StoreSchema, StoreNames>,
+//     callbackfn: (method: keyof IDBQueryMethod_Store<StoreSchema, StoreNames>) => any
+//   ): this {
+//     (Object
+//       .keys(query) as Array<keyof IDBQueryMethod_Store<StoreSchema, StoreNames>>)
+//       .forEach(callbackfn);
+//     return this;
+//   }
+
+//   /**
+//    * 
+//    * @param query 
+//    * @param callbackfn 
+//    * @returns 
+//    */
+//   #queryStore<StoreName extends StoreNames>(
+//     query: IDBQueryStore_Method<StoreName, StoreSchema, StoreNames>,
+//     callbackfn: (storeName: keyof IDBQueryStore_Method<StoreName, StoreSchema, StoreNames>) => any
+//   ): this {
+//     (Object
+//       .keys(query) as Array<keyof IDBQueryStore_Method<StoreName, StoreSchema, StoreNames>>)
+//       .forEach(callbackfn);
+//     return this;
+//   }
+// }
