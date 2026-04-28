@@ -1,152 +1,146 @@
-// Type.
-import { IDBStoreParameters } from '../type/idb-store-parameters.type';
-
+// Interface.
+import { IDBOpenDBRequestEvents } from "@typedly/indexeddb";
+// Abstract.
+import { DBConnection } from "./db/db-connection.abstract";
 /**
- * Class to open connection and create object store.
+ * @description Class to handle the connection of IndexedDB database.
+ * It extends the abstract `DBConnection` class and implements the open method to open the database connection using IndexedDB API.
+ * It also provides a close method to close the database connection and a ready method to wait for the database connection to be ready.
+ * @export
+ * @class IDBConnection
+ * @template {string} [Name=string] 
+ * @template {number} [Version=number] 
+ * @extends {DBConnection<Name, Version, IDBDatabase, IDBOpenDBRequest>}
  */
 export class IDBConnection<
   Name extends string = string,
-  StoreNames extends string | number | symbol = string,
-  Version extends number = number
-> {
-  /**
-   * @description
-   * @public
-   * @readonly
-   * @type {IDBDatabase}
-   */
-  public get db(): IDBDatabase {
-    return this.#db;
+  Version extends number = number,
+> extends DBConnection<Name, Version, IDBDatabase, IDBOpenDBRequest> {
+  public get database(): IDBDatabase | undefined {
+    return this.#openRequest?.result;
+  }
+  public get openRequest(): IDBOpenDBRequest | undefined {
+    return this.#openRequest;
+  }
+  public get version(): Version | undefined {
+    return this.#openRequest?.result?.version as Version ?? this.#version;
   }
 
   /**
-   * @description
-   * @public
-   * @readonly
-   * @type {Name}
+   * @description Privately stored open request. Subclass may use this to store the open request and resolve/reject the ready promise when it succeeds/fails.
+   * @type {!IDBOpenDBRequest}
    */
-  public get name(): Name {
-    return this.#db.name as Name;
-  }
+  #openRequest!: IDBOpenDBRequest;
+   
+  /**
+   * @description Privately stored onblocked event handler. Subclass may use this to handle the blocked event when opening the database.
+   * @type {?((this: IDBOpenDBRequest, ev: Event) => any) | null}
+   */
+  #onblocked?: ((this: IDBOpenDBRequest, ev: Event) => any) | null;
 
   /**
-   * 
+   * @description Privately stored onerror event handler. Subclass may use this to handle the error event when opening the database.
+   * @type {?((this: IDBOpenDBRequest, ev: Event) => any) | null}
    */
-  public get request(): IDBOpenDBRequest {
-    return this.#request;
-  }
+  #onerror?: ((this: IDBOpenDBRequest, ev: Event) => any) | null;
 
   /**
-   * 
+   * @description Privately stored onsuccess event handler. Subclass may use this to handle the success event when opening the database.
+   * @type {?((this: IDBOpenDBRequest, ev: Event) => any) | null}
    */
-  public get store(): IDBStoreParameters<StoreNames> | undefined {
-    return this.#store;
-  }
+  #onsuccess?: ((this: IDBOpenDBRequest, ev: Event) => any) | null
 
   /**
-   * 
+   * @description Privately stored onupgradeneeded event handler. Subclass may use this to handle the upgradeneeded event when opening the database.
+   * @type {?((this: IDBOpenDBRequest, ev: IDBVersionChangeEvent) => any) | null}
    */
-  public get storeNames(): StoreNames | StoreNames[] {
-    return this.#storeNames;
-  }
+  #onupgradeneeded?: ((this: IDBOpenDBRequest, ev: IDBVersionChangeEvent) => any) | null;
 
   /**
-   * 
+   * @description Privately stored version. Subclass may use this in the open request.
+   * @type {!Version}
    */
-  #db!: IDBDatabase;
+  #version!: Version;
 
   /**
-   * 
-   */
-  #request!: IDBOpenDBRequest;
-
-  /**
-   * 
-   */
-  #store?: IDBStoreParameters<StoreNames>;
-
-  /**
-   * 
-   */
-  #storeNames: StoreNames | StoreNames[];
-
-  /**
-   * 
-   * @param name 
-   * @param storeNames 
-   * @param store 
-   * @param version 
+   * Creates an instance of `IDBConnection`.
+   * @constructor
+   * @param {Name} name 
+   * @param {Version} [version=1 as any] 
+   * @param {IDBOpenDBRequestEvents} [param0={}] 
+   * @param {(ev: Event) => any} param0.onblocked 
+   * @param {(this: IDBOpenDBRequest, ev: Event) => any} param0.onerror 
+   * @param {(this: IDBOpenDBRequest, ev: Event) => any} param0.onsuccess 
+   * @param {(this: IDBOpenDBRequest, ev: IDBVersionChangeEvent) => any} param0.onupgradeneeded 
+   * @param {boolean} [open=true] 
    */
   constructor(
     name: Name,
-    storeNames: StoreNames | StoreNames[],
-    store?: IDBStoreParameters<StoreNames>,
     version: Version = 1 as any,
+    { onblocked, onerror, onsuccess, onupgradeneeded }: IDBOpenDBRequestEvents = {},
+    open: boolean = true
   ) {
-    this.#store = store;
-    this.#storeNames = storeNames;
+    super(name);
+    this.#version = version;
+    onblocked && (this.#onblocked = onblocked);
+    onerror && (this.#onerror = onerror);
+    onsuccess && (this.#onsuccess = onsuccess);
+    onupgradeneeded && (this.#onupgradeneeded = onupgradeneeded);
+    open && this.open();
+  }
 
-    if (!this.#request) {
-      // Request open database.
-      if (typeof window !== 'undefined' && window.indexedDB) {
-        this.#request = window.indexedDB.open(name, version);
+  /**
+   * @description Closes the database connection. Subclass may use this to close the database connection when needed.
+   * @public
+   */
+  public close(): void {
+    this.#openRequest?.result?.close();
+  }
+  
+  /**
+   * @description Opens the database connection. Subclass may use this to open the database connection when needed.
+   * @public
+   * @async
+   * @returns {Promise<IDBOpenDBRequest>} 
+   */
+  public async open({ onblocked, onerror, onsuccess, onupgradeneeded }: IDBOpenDBRequestEvents = {}
+  ): Promise<IDBOpenDBRequest> {
+    if (typeof window === 'undefined' || !window.indexedDB) {
+      const error = new Error('IndexedDB is not available in this environment');
+      super.rejectReady(error);
+      return Promise.reject(error);
+    }
+    if (typeof window !== 'undefined' && window.indexedDB) {
+      !this.#openRequest && this.setOpenRequest(window.indexedDB.open(super.name, this.#version));
+      if (this.#openRequest) {
+        typeof (onsuccess ?? this.#onsuccess) === 'function' &&
+          this.#openRequest.addEventListener('success', (onsuccess ?? this.#onsuccess) as EventListener, { once: true });
+        typeof (onerror ?? this.#onerror) === 'function' &&
+          this.#openRequest.addEventListener('error', (onerror ?? this.#onerror) as EventListener, { once: true });
+        typeof (onupgradeneeded ?? this.#onupgradeneeded) === 'function' &&
+          this.#openRequest.addEventListener('upgradeneeded', (onupgradeneeded ?? this.#onupgradeneeded) as EventListener, { once: true });
+        typeof (onblocked ?? this.#onblocked) === 'function' &&
+          this.#openRequest.addEventListener('blocked', ev => (onblocked ?? this.#onblocked)?.call(this.#openRequest, ev), { once: true });
 
         // Database successfully opened.
-        this.#request.addEventListener(
+        this.#openRequest.addEventListener(
           'success',
-          (ev: any) => (
-            this.#db = ev.target.result,
-            console.log(`Database ${this.#db.name} opened successfully with store ${this.#storeNames.valueOf() as string}`)
-          ),
-          true
+          () => super.resolveReady(this.#openRequest),
+          { once: true }
         );
+        this.#openRequest.addEventListener('error', () => super.rejectReady(this.#openRequest.error ?? new Error('IndexedDB open error')), { once: true });
+        return this.ready();
       }
-      // On upgrade needed.
-      store && this.onupgradeneeded(store);
     }
+    return Promise.resolve(this.#openRequest);
   }
-
-  /**
-   * 
-   * @param store 
-   * @returns 
-   */
-  public onupgradeneeded(store: IDBStoreParameters<StoreNames>): this {
-    if (this.#request) {
-      this.#request.addEventListener('upgradeneeded', (e: any) => (
-        // Grab a reference to the opened database.
-        this.#db = e.target.result as IDBDatabase,
-
-        // Create store.
-        this.createObjectStore(store),
-
-        // Log.
-        console.log('Database setup complete')
-      ));      
-    }
-    return this;
+  public override async ready(
+    callbackfn?: (openRequest: IDBOpenDBRequest) => void
+  ): Promise<IDBOpenDBRequest> {
+    await super.ready(callbackfn);
+    return this.#openRequest;
   }
-
-  /**
-   * Create an objectStore to store data.
-   * @param store 
-   * @param db 
-   * @returns 
-   */
-  public createObjectStore(
-    store: IDBStoreParameters<StoreNames>,
-    db: IDBDatabase = this.#db
-  ) {
-    typeof store === 'object' &&
-      Object.keys(store).forEach((objectStoreName) => {
-        const objectStore = db.createObjectStore(
-          objectStoreName,
-          store[objectStoreName as StoreNames]
-        );
-        store[objectStoreName as StoreNames].index?.forEach((index) =>
-          objectStore.createIndex(index.name, index.keyPath, index.options)
-        );
-      });
-    return this;
+  protected setOpenRequest(openRequest: IDBOpenDBRequest): void {
+    this.#openRequest = openRequest;
   }
 }
