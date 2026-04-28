@@ -1,147 +1,295 @@
 // Class.
 import { IDBConnection } from './idb-connection.class';
-
+// Interface.
+import type {
+  IDBOpenStoreResult,
+  IDBOpenStoresResult,
+  IDBOpenTransactionResult,
+  IDBQueryTransactionOptions,
+  IDBStoreParameters,
+  IDBTransactionEvents,
+} from '@typedly/indexeddb';
 // Type.
-import { IDBStoreParameters } from '../type/idb-store-parameters.type';
-
+import type { IDBStoresParameters, IDBSchema } from '@typedly/indexeddb';
+import type { SchemaRecordToType } from '@typedly/schema';
 /**
- * Class with opened connection (IDBConnection), to handle transaction and store.
+ * @description Class with opened connection (IDBConnection), to handle transaction and store.
+ * @export
+ * @class IDBData
+ * @template {IDBSchema} Schema 
+ * @template {string} [DBName=string] 
+ * @template {keyof Schema & string} [StoreNames=keyof Schema & string] 
+ * @template {number} [Version=number] 
  */
 export class IDBData<
-  Name extends string = string,
-  StoreNames extends string | number | symbol = string,
+  Schema extends IDBSchema,
+  DBName extends string = string,
+  StoreNames extends keyof Schema & string = keyof Schema & string,
   Version extends number = number,
 > {
+  public static create<const RawSchema extends IDBSchema, T extends boolean = false>(
+    _schema: RawSchema
+  ): <
+    DBName extends string,
+    Schema extends SchemaRecordToType<RawSchema> = SchemaRecordToType<RawSchema>,
+    StoreNames extends keyof Schema & string = keyof Schema & string,
+    Version extends number = number
+  >(
+    storesParameters: IDBStoresParameters<StoreNames>,
+    connection: T extends true
+      ? IDBConnection<DBName, Version>
+      : { name?: DBName; version?: Version },
+  ) => IDBData<Schema, DBName, StoreNames, Version>;
+
+  public static create<Schema extends IDBSchema, T extends boolean = false>(): <
+    DBName extends string,
+    StoreNames extends keyof Schema & string = keyof Schema & string,
+    Version extends number = number
+  >(
+    storesParameters: IDBStoresParameters<StoreNames>,
+    connection: T extends true
+      ? IDBConnection<DBName, Version>
+      : { name?: DBName; version?: Version },
+  ) => IDBData<Schema, DBName, StoreNames, Version>;
+
+  public static create(schema?: IDBSchema) {
+    return (storesParameters: any, connection: any) =>
+      new IDBData(storesParameters, connection);
+  }
+
+  public static createStore<
+    StoreName extends string
+  >(
+    db: IDBDatabase,
+    name: StoreName,
+    parameters: IDBStoreParameters,
+  ) {
+    if (db) {
+      const objectStore = db.createObjectStore(name, parameters);
+      parameters.index?.forEach(index => 
+        objectStore.createIndex(index.name, index.keyPath, index.options)
+      );
+    }
+    return this;
+  }
+
+  public static createStores<StoreNames extends string>(
+    db: IDBDatabase,
+    parameters: IDBStoresParameters<StoreNames>,
+  ) {
+    return db && Object.keys(parameters).forEach(
+      name => IDBData.createStore(db, name, parameters[name as StoreNames])
+    ), this;
+  }
+
   /**
-   * 
+   * @description
+   * @public
+   * @readonly
+   * @type {IDBConnection<DBName, Version>}
    */
   public get connection() {
     return this.#connection;
   }
 
   /**
-   * 
+   * @description
+   * @public
+   * @readonly
+   * @type {IDBStoresParameters<StoreNames>}
    */
-  #connection!: IDBConnection<Name, StoreNames, Version>;
+  public get storesParameters() {
+    return this.#storesParameters;
+  }
 
   /**
-   * 
+   * @description
+   * @type {!IDBConnection<DBName, Version>}
+   */
+  #connection!: IDBConnection<DBName, Version>;
+
+  /**
+   * @description
+   * @type {IDBStoresParameters<StoreNames>}
+   */
+  #storesParameters: IDBStoresParameters<StoreNames>;
+
+  /**
+   * @description Constructor to create IDBData instance with opened connection and store parameters.
+   * The connection is created with the given name and version, and the stores are created in the onupgradeneeded event of the connection.
+   * The stores parameters are stored in the instance for later use when creating transactions.  
    * @param name 
-   * @param storeNames 
-   * @param store 
    * @param version 
    */
   constructor(
-    name: Name,
-    storeNames: StoreNames | StoreNames[],
-    store?: IDBStoreParameters<StoreNames>,
-    version: Version = 1 as any
-  ) {
-    this.#connection = new IDBConnection(
-      name,
-      storeNames,
-      store,
-      version
-    );
-  }
-
-  /**
-   * 
-   * @param storeName 
-   * @param onsuccess 
-   * @param oncomplete 
-   * @param onabort 
-   * @param onerror 
-   * @param storeNames 
-   * @param mode 
-   * @returns 
-   */
-  public objectStore(
-    storeName: StoreNames,
-
-    // Transaction.
-    onsuccess?: (store: IDBObjectStore, transaction: IDBTransaction) => any,
-    oncomplete?: (this: IDBTransaction, ev: Event) => any,
-    onabort?: (this: IDBTransaction, ev: Event) => any,
-    onerror?: (this: IDBTransaction, ev: Event) => any,
-
-    // Store.
-    storeNames: StoreNames | StoreNames[] = this.connection.storeNames,
-    mode?: IDBTransactionMode
-  ): this {
-    return this.transaction(
-      transaction => typeof onsuccess === 'function'
-        && typeof storeName === 'string'
-        && onsuccess(transaction.objectStore(storeName), transaction),
-      oncomplete,
-      onabort,
-      onerror,
-      storeNames,
-      mode
-    );
-  }
-
-  /**
-   * 
-   * @param onsuccess 
-   * @param oncomplete 
-   * @param onabort 
-   * @param onerror 
-   * @param storeNames 
-   * @param mode 
-   * @returns 
-   */
-  public transaction(
-    onsuccess?: (transaction: IDBTransaction) => any,
-    oncomplete?: (this: IDBTransaction, ev: Event) => any,
-    onabort?: (this: IDBTransaction, ev: Event) => any,
-    onerror?: (this: IDBTransaction, ev: Event) => any,
-    storeNames: StoreNames | StoreNames[] = this.#connection.storeNames,
-    mode: IDBTransactionMode = "readonly"
-  ): this {
-    this.#connection.db ?
-      this.#transaction(
-        this.#connection.db.transaction(storeNames as string | string[], mode),
-        onsuccess,
-        oncomplete,
-        onabort,
-        onerror
-      )
-      :
-      this.#connection.request.addEventListener('success', (ev: any) => {
-        this.#transaction(
-          (ev.target.result as any).transaction(storeNames as string | string[], mode),
-          onsuccess,
-          oncomplete,
-          onabort,
-          onerror
-        );
-      });
-    return this;
-  }
-
-  /**
-   * 
-   * @param transaction 
-   * @param onsuccess 
-   * @param oncomplete 
-   * @param onabort 
-   * @param onerror 
-   * @returns 
-   */
-  #transaction(
-    transaction: IDBTransaction,
-    onsuccess?: (transaction: IDBTransaction) => any,
-    oncomplete?: (this: IDBTransaction, ev: Event) => any,
-    onabort?: (this: IDBTransaction, ev: Event) => any,
-    onerror?: (this: IDBTransaction, ev: Event) => any,
-  ): this {
-    if (transaction) {
-      typeof onsuccess === 'function' && onsuccess(transaction);
-      typeof oncomplete === 'function' && (transaction.oncomplete = oncomplete);
-      typeof onabort === 'function' && (transaction.onabort = onabort);
-      typeof onerror === 'function' && (transaction.onerror = onerror);
+    storesParameters: IDBStoresParameters<StoreNames>,
+    connection: {
+      name: DBName,
+      version: Version,
     }
-    return this;
+  )
+  constructor(
+    storesParameters: IDBStoresParameters<StoreNames>,
+    connection: IDBConnection<DBName, Version>
+  )
+  constructor(
+    storesParameters: IDBStoresParameters<StoreNames>,
+    connection: any
+  ) {
+    this.#connection = connection instanceof IDBConnection
+      ? connection
+      : new IDBConnection(
+        connection.name!,
+        connection.version ?? 1 as Version, { 
+          onupgradeneeded: event =>
+            IDBData.createStores(this.#connection.database!, storesParameters)
+        }
+      );
+    connection instanceof IDBConnection && this.#connection.open({
+      onupgradeneeded: event => IDBData.createStores(this.#connection.database!, storesParameters),
+    });
+    this.#storesParameters = storesParameters;
+  }
+
+  public async objectStores<Names extends StoreNames & string>(
+    storeNames: Names[],
+    {
+      ondone,
+      mode,
+      onabort,
+      oncomplete,
+      onerror,
+      options,
+      ontransaction
+    }: IDBQueryTransactionOptions = {}
+  ): Promise<{ [K in Names]: IDBObjectStore }> {
+    const {stores} = await this.openStores(storeNames, {mode, ondone, onabort, oncomplete, onerror, ontransaction, options});
+    return stores;
+  }
+
+  public async openStore<StoreName extends StoreNames & string>(
+    storeName: StoreName,
+    {
+      mode,
+      onabort,
+      oncomplete,
+      onerror
+    }: Omit<IDBQueryTransactionOptions, 'ondone' | 'ontransaction' | 'options'> = {}
+  ): Promise<IDBOpenStoreResult> {
+    const {done, transaction} = await this.openTransaction(
+      storeName,
+      { oncomplete, onabort, onerror, mode }
+    );
+    return {done, store: transaction.objectStore(storeName), transaction};
+  }
+
+  public async openStores<Names extends StoreNames & string>(
+    storeNames: Names[],
+    {
+      mode,
+      // Transaction events
+      onabort,
+      oncomplete,
+      onerror,
+      // Custom transaction options
+      ondone,
+      ontransaction,
+      // Transaction options
+      options,
+    }: IDBQueryTransactionOptions = {}
+  ): Promise<IDBOpenStoresResult<Names>> {
+    const {transaction, done} = await this.openTransaction(
+      storeNames as any,
+      { oncomplete, onabort, onerror, mode, options }
+    );
+    if (!transaction) throw new Error('Transaction not created');
+    const stores = {} as { [K in Names]: IDBObjectStore };
+    storeNames.map(name => stores[name] = transaction.objectStore(name));
+    ontransaction?.(transaction);
+    typeof ondone === 'function' && done.then(() => ondone(done));
+    return {done, stores, transaction};
+  }
+
+  public async openTransaction(
+    storeNames: StoreNames | StoreNames[],
+    {
+      mode = "readonly",
+      onabort,
+      oncomplete,
+      onerror,
+      options
+    }: Omit<IDBQueryTransactionOptions, 'ondone' | 'ontransaction'> = {},
+  ): Promise<IDBOpenTransactionResult> {
+    // Create transaction.
+    const transaction = await this.transaction(storeNames, { mode, options });
+    const {done} = this.#doneTransaction(
+      transaction,
+      { onabort, oncomplete, onerror }
+    );
+    return { done, transaction };
+  }
+
+  public async transaction(
+    storeNames: StoreNames | StoreNames[],
+    {
+      mode = "readonly",
+      options
+    }: { mode?: IDBTransactionMode, options?: IDBTransactionOptions } = {},
+  ): Promise<IDBTransaction> {
+    // Wait for connection to be ready.
+    await this.#connection.ready();
+    const database = this.#connection.database;
+    if (!database) throw new Error('Database not opened');
+    return database.transaction(
+      storeNames as string | string[],
+      mode,
+      options
+    );
+  }
+
+  public async transactStores<Names extends StoreNames & string, R>(
+    storeNames: Names[],
+    {
+      mode,
+      // Transaction events
+      onabort,
+      oncomplete,
+      onerror,
+      // Custom transaction options
+      ondone,
+      ontransaction,
+      // Transaction options
+      options,
+    }: IDBQueryTransactionOptions = {},
+    callbackfn: (done: Promise<void>, stores: { [K in Names]: IDBObjectStore }, transaction: IDBTransaction) => Promise<R>
+  ): Promise<R> {
+    const { stores, transaction, done } = await this.openStores(storeNames, { mode, onabort, oncomplete, onerror, ondone, ontransaction, options });
+    const result = await callbackfn(done, stores, transaction);
+    await done;
+    return result;
+  }
+
+  #doneTransaction(
+    transaction: IDBTransaction,
+    { onabort, oncomplete, onerror }: IDBTransactionEvents
+  ): IDBOpenTransactionResult {
+    const done = new Promise<void>((resolve, reject) => (
+      transaction.addEventListener(
+        'complete',
+        event => (oncomplete?.call(transaction, event), resolve()),
+        { once: true }
+      ),
+      transaction.addEventListener(
+        'error',
+        event => (onerror?.call(transaction, event), reject(transaction.error ?? new Error("transaction error"))),
+        { once: true },
+      ),
+      transaction.addEventListener(
+        'abort',
+        event => (onabort?.call(transaction, event), reject(transaction.error ?? new Error("transaction aborted"))),
+        { once: true }
+      )
+    ));
+    return {done, transaction};
   }
 }
