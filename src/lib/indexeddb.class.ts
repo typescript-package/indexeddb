@@ -8,10 +8,11 @@ import {
   IDBOpenStoresResult,
   IDBQueryTransactionOptions,
   IDBSchema,
+  IDBSettings,
   IDBStoreParameters,
   IDBStoreQuery,
-  IDBStoresParameters,
 } from '@typedly/indexeddb';
+import { SchemaRecordToType } from '@typedly/schema';
 /**
  * @description
  * @export
@@ -29,13 +30,30 @@ export class IndexedDB<
   StoreNames extends keyof Schema & string = DataInstance extends IDBData<Schema, any, infer S, any> ? S : keyof Schema & string,
   Version extends number = DataInstance extends IDBData<Schema, any, any, infer V> ? V : number,
 > {
-  public static create<Schema extends IDBSchema, T extends boolean = false>() {
+  public static create<const RawSchema extends IDBSchema, DataType extends boolean = false>(dataType: DataType,_schema: RawSchema): <
+      DataInstance extends IDBData<Schema, DBName, StoreNames, Version>,
+      DBName extends string = DataInstance extends IDBData<RawSchema, infer N, any, any> ? N : string,
+      Schema extends SchemaRecordToType<RawSchema> = SchemaRecordToType<RawSchema>,
+      StoreNames extends keyof RawSchema & string = DataInstance extends IDBData<RawSchema, any, infer S, any> ? S : keyof RawSchema & string,
+      Version extends number = DataInstance extends IDBData<RawSchema, any, any, infer V> ? V : number,
+    >(data: DataType extends true ? DataInstance : IDBSettings<DBName, StoreNames, Version>) => 
+        IndexedDB<DataInstance, Schema, DBName, StoreNames, Version>;
+
+  public static create<Schema extends IDBSchema, DataType extends boolean = false>(): <
+      DataInstance extends IDBData<Schema, DBName, StoreNames, Version>,
+      DBName extends string = DataInstance extends IDBData<Schema, infer N, any, any> ? N : string,
+      StoreNames extends keyof Schema & string = DataInstance extends IDBData<Schema, any, infer S, any> ? S : keyof Schema & string,
+      Version extends number = DataInstance extends IDBData<Schema, any, any, infer V> ? V : number,
+    >(data: DataType extends true ? DataInstance : IDBSettings<DBName, StoreNames, Version>) => 
+        IndexedDB<DataInstance, Schema, DBName, StoreNames, Version>;
+  
+  public static create<Schema extends IDBSchema, DataType extends boolean = false>(dataType?: DataType,_schema?: Schema) {
     return <
       DataInstance extends IDBData<Schema, DBName, StoreNames, Version>,
       DBName extends string = DataInstance extends IDBData<Schema, infer N, any, any> ? N : string,
       StoreNames extends keyof Schema & string = DataInstance extends IDBData<Schema, any, infer S, any> ? S : keyof Schema & string,
       Version extends number = DataInstance extends IDBData<Schema, any, any, infer V> ? V : number,
-    >(data: T extends true ? DataInstance : { name: DBName; parameters: IDBStoresParameters<StoreNames>; version: Version }) => 
+    >(data: DataType extends true ? DataInstance : IDBSettings<DBName, StoreNames, Version>) => 
         new IndexedDB<DataInstance, Schema, DBName, StoreNames, Version>(
       data as any
     );
@@ -66,18 +84,15 @@ export class IndexedDB<
   
   #data!: DataInstance;
 
-  constructor(settings: {
-    name: DBName,
-    parameters: IDBStoresParameters<StoreNames>,
-    version: Version
-  })
+  constructor(settings: IDBSettings<DBName, StoreNames, Version>)
   constructor(data: DataInstance)
   constructor(data: any) {
     this.#data = data instanceof IDBData ? data as DataInstance : new IDBData(
       data.parameters,
       {
         name: data.name,
-        version: data.version
+        version: data.version,
+        connectionEvents: data.connectionEvents
       } as any
     ) as DataInstance;
   }
