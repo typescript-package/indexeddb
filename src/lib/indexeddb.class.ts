@@ -9,6 +9,7 @@ import {
   IDBQueryTransactionOptions,
   IDBSchema,
   IDBSettings,
+  IDBSettingsWithConnection,
   IDBStoreParameters,
   IDBStoreQuery,
 } from '@typedly/indexeddb';
@@ -84,7 +85,8 @@ export class IndexedDB<
   
   #data!: DataInstance;
 
-  constructor(settings: IDBSettings<DBName, StoreNames, Version>)
+  constructor(settings: IDBSettings<DBName, StoreNames, Version> & { schema?: Schema });
+  constructor(settings: IDBSettingsWithConnection<DBName, StoreNames, Version> & { schema?: Schema });
   constructor(data: DataInstance)
   constructor(data: any) {
     this.#data = data instanceof IDBData ? data as DataInstance : new IDBData(
