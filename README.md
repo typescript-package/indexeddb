@@ -111,12 +111,9 @@ export type Shop = {
   cart: { id: number; items: string[] };
 };
 
-export type Shop = {
-  person: { id: number; name: string };
-  cart: { id: number; items: string[] };
-};
-
-export const shopSchemaDBWithConnection = IDBData.create<Shop>()({
+// Initialize the database with the connection instance and schema.
+// const shopSchemaDBWithConnection: IDBData<Shop, "test-db", "person" | "cart", 1>
+export const shopSchemaDBWithConnection = IDBData.create<Shop, true>()({
     person: {
       keyPath: 'id',
       autoIncrement: true,
@@ -143,30 +140,8 @@ console.log(`shopSchemaDB.connection`, shopSchemaDBWithConnection.connection);
 console.log(`shopSchemaDB.storesParameters`, shopSchemaDBWithConnection.storesParameters);
 
 // Initialize the database with schema and connection parameters.
-export const shopSchemaDBwithParameters = IDBData.create<Shop>()({
-    person: {
-      keyPath: 'id',
-      autoIncrement: true,
-      index: [
-        { name: 'name', keyPath: 'name', options: { unique: false } }
-      ]
-    },
-    cart: {
-      keyPath: 'id',
-      autoIncrement: true,
-      index: [
-        { name: 'items', keyPath: 'items', options: { unique: false } }
-      ]
-    },
-  },
-  {
-    'name': 'test-db',
-    'version': 1,
-  }
-);
-
-// Initialize the database with schema and connection parameters.
-export const shopSchemaDBwithParameters = IDBData.create<Shop>()({
+// const shopSchemaDBwithParameters: IDBData<Shop, "test-db", "person" | "cart", 1>
+export const shopSchemaDBwithParameters = IDBData.create<Shop, false>()({
     person: {
       keyPath: 'id',
       autoIncrement: true,
@@ -189,10 +164,22 @@ export const shopSchemaDBwithParameters = IDBData.create<Shop>()({
 );
 
 // Initialize the database with raw schema and connection parameters.
+/*
+const rawSchemaDBwithParameters: IDBData<{
+    person: {
+        id: number;
+        name: string;
+    };
+    cart: {
+        id: number;
+        items: string[];
+    };
+}, "test-db", "person" | "cart", 1>
+*/
 export const rawSchemaDBwithParameters = IDBData.create(false, {
-  person: { id: 'number', name: 'string' },
-  cart: { id: 'number', items: { array: 'string' } },
-})({
+    person: { id: 'number', name: 'string' },
+    cart: { id: 'number', items: { array: 'string' } },
+  })({
     person: {
       keyPath: 'id',
       autoIncrement: true,
@@ -215,10 +202,22 @@ export const rawSchemaDBwithParameters = IDBData.create(false, {
 );
 
 // Initialize the database with raw schema and connection parameters.
+/*
+const rawSchemaDBwithConnection: IDBData<{
+    person: {
+        id: number;
+        name: string;
+    };
+    cart: {
+        id: number;
+        items: string[];
+    };
+}, "test-db", "person" | "cart", 1>
+*/
 export const rawSchemaDBwithConnection = IDBData.create(true, {
-  person: { id: 'number', name: 'string' },
-  cart: { id: 'number', items: { array: 'string' } },
-})({
+    person: { id: 'number', name: 'string' },
+    cart: { id: 'number', items: { array: 'string' } },
+  })({
     person: {
       keyPath: 'id',
       autoIncrement: true,
