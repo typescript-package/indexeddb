@@ -201,7 +201,7 @@ export const rawSchemaDBwithParameters = IDBData.create(false, {
   }
 );
 
-// Initialize the database with raw schema and connection parameters.
+// Initialize the database with raw schema and connection instance.
 /*
 const rawSchemaDBwithConnection: IDBData<{
     person: {
@@ -304,69 +304,7 @@ const shopSchemaQueryWithParameters = IDBQuery.create<Shop, false>()({
   },
 );
 
-// Query providing raw schema with parameters
-/*
-const rawSchemaQuery: IDBQuery<IDBData<{
-    person: {
-        id: number;
-        name: string;
-    };
-    cart: {
-        id: number;
-        items: string[];
-    };
-}, "TestDB", "person", 1>, {
-    person: {
-        id: number;
-        name: string;
-    };
-    cart: {
-        id: number;
-        items: string[];
-    };
-}, "TestDB", "person", 1>
-*/
-const rawSchemaQuery = IDBQuery.create(false, {
-  person: { id: 'number', name: 'string' },
-  cart: { id: 'number', items: { array: 'string' } },
-})({
-  'store': {
-    'person': {
-      'add': {
-        'value': { name: 'Alice' },
-      }
-    }
-  }
-  }, {
-    mode: 'readwrite',
-    ondone: (done: Promise<void>) => console.log('Transaction done.', done),
-    onabort(ev: Event) { console.warn('Transaction aborted.', ev); },
-    oncomplete(ev: Event) { console.log('Transaction completed.', ev); },
-    onerror(ev: Event) { console.error('Transaction error.', ev); },
-    ontransaction(transaction: IDBTransaction) { console.log('Transaction started.', transaction); }
-  },
-  {
-    parameters: {
-      person: {
-        keyPath: 'id',
-        autoIncrement: true,
-        index: [
-          { name: 'name', keyPath: 'name', options: { unique: false } }
-        ]
-      },
-    },
-    name: 'TestDB',
-    version: 1,
-    connectionEvents: {
-      'onblocked': (ev: Event) => console.warn('Connection blocked.', ev),
-      'onerror': (ev: Event) => console.error('Connection error.', ev),
-      'onupgradeneeded': (ev: IDBVersionChangeEvent) => console.log('Upgrade needed.', ev),
-      'onsuccess': (ev: Event) => console.log('Connection successful.', ev),
-    }
-  },
-);
-
-// Query providing raw schema with parameters
+// Query providing raw schema with data instance instantiated with parameters
 /*
 const rawSchemaQueryWithParameters: IDBQuery<IDBData<{
     person: {
@@ -410,7 +348,7 @@ const rawSchemaQueryWithParameters = IDBQuery.create(true, {
   rawSchemaDBwithParameters
 );
 
-// Query providing raw schema with data instance
+// Query providing raw schema with data instance consists of Shop schema and connection instance
 /*
 const rawSchemaQueryWithData: IDBQuery<IDBData<{
     person: {
@@ -452,6 +390,44 @@ const rawSchemaQueryWithData = IDBQuery.create(true, {
     ontransaction(transaction: IDBTransaction) { console.log('Transaction started.', transaction); }
   },
   rawSchemaDBwithConnection
+);
+
+// Creates a query with data instance consists of Shop schema and connection instance
+/*
+const idbQuery: IDBQuery<IDBData<Shop, "test-db", "person" | "cart", 1>, {
+    person: {
+        name: string;
+    };
+}, "test-db", "person", 1>
+*/
+const idbQueryConstructorWithData = new IDBQuery({
+  'store': {
+    'person': {
+      'put': {
+        value: { 'name': 'Bob' },
+        onsuccess: (ev: Event) => console.log('Put operation successful.', ev),
+        onerror: (ev: Event) => console.error('Put operation failed.', ev),
+      },
+      'add': [{
+        value: { name: 'Charlie' },
+        onsuccess: (ev: Event) => console.log('Add operation successful.', ev),
+        onerror: (ev: Event) => console.error('Add operation failed.', ev),
+      }, {
+        value: { name: 'Someone' },
+        onsuccess: (ev: Event) => console.log('Add operation successful.', ev),
+        onerror: (ev: Event) => console.error('Add operation failed.', ev),
+      }]
+    },
+  }
+  }, {
+    mode: 'readwrite',
+    ondone: (done: Promise<void>) => console.log('Transaction done.', done),
+    onabort(ev: Event) { console.warn('Transaction aborted.', ev); },
+    oncomplete(ev: Event) { console.log('Transaction completed.', ev); },
+    onerror(ev: Event) { console.error('Transaction error.', ev); },
+    ontransaction(transaction: IDBTransaction) { console.log('Transaction started.', transaction); }
+  },
+  shopSchemaDBWithConnection
 );
 
 // Creates a query with parameters
@@ -540,16 +516,13 @@ const indexedDBWithShopAndParameters = IndexedDB.create<Shop, false>()({
   }
 });
 
-// Adding with Shop schema and data instance.
+// Adding with Shop schema with data instance consists of connection instance.
 // const indexedDBWithShopAndData: IndexedDB<IDBData<Shop, "test-db", "person" | "cart", 1>, Shop, "test-db", "person" | "cart", 1>
 const indexedDBWithShopAndData = IndexedDB.create<Shop, true>()(shopSchemaDBWithConnection);
 
-
-
-
 // Adding with raw schema and parameters.
 /*
-const schemaIndexedDB3: IndexedDB<IDBData<{
+const rawSchemaIndexedDB3: IndexedDB<IDBData<{
     person: {
         id: number;
         name: string;
@@ -569,7 +542,7 @@ const schemaIndexedDB3: IndexedDB<IDBData<{
     };
 }, "test-db", "person" | "cart", 1>
 */
-const schemaIndexedDB3 = IndexedDB.create(false, {
+const rawSchemaIndexedDB3 = IndexedDB.create(false, {
   person: { id: 'number', name: 'string' },
   cart: { id: 'number', items: { array: 'string' } },
 })({
@@ -593,9 +566,9 @@ const schemaIndexedDB3 = IndexedDB.create(false, {
   }
 });
 
-// Adding with raw schema and data instance.
+// Adding with raw schema and data instance consists of raw schema and connection instance.
 /*
-const schemaIndexedDB4: IndexedDB<IDBData<{
+const rawSchemaIndexedDBWithDataAndConnection: IndexedDB<IDBData<{
     person: {
         id: number;
         name: string;
@@ -615,7 +588,7 @@ const schemaIndexedDB4: IndexedDB<IDBData<{
     };
 }, "test-db", "person" | "cart", 1>
 */
-const schemaIndexedDB4 = IndexedDB.create(true, {
+const rawSchemaIndexedDBWithDataAndConnection = IndexedDB.create(true, {
   person: { id: 'number', name: 'string' },
   cart: { id: 'number', items: { array: 'string' } },
 })(rawSchemaDBwithConnection);
@@ -638,10 +611,9 @@ const indexedDBWithParameters = new IndexedDB({
 });
 
 
-// Creating with only parameters via constructor.
+// Creating IndexedDB instance with data instance consists of Shop schema and connection instance.
 // const indexedDBWithData: IndexedDB<IDBData<Shop, "test-db", "person" | "cart", 1>, IDBSchema, "test-db", "person" | "cart", 1>
 const indexedDBWithData = new IndexedDB(shopSchemaDBWithConnection);
-
 ```
 
 ## Contributing
