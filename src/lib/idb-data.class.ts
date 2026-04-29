@@ -10,7 +10,7 @@ import type {
   IDBTransactionEvents,
 } from '@typedly/indexeddb';
 // Type.
-import type { IDBStoresParameters, IDBSchema } from '@typedly/indexeddb';
+import type { IDBStoresParameters, IDBSchema, IDBConnectionSettings } from '@typedly/indexeddb';
 import type { SchemaRecordToType } from '@typedly/schema';
 /**
  * @description Class with opened connection (IDBConnection), to handle transaction and store.
@@ -28,6 +28,7 @@ export class IDBData<
   Version extends number = number,
 > {
   public static create<const RawSchema extends IDBSchema, T extends boolean = false>(
+    dataType: T,
     _schema: RawSchema
   ): <
     DBName extends string,
@@ -123,10 +124,7 @@ export class IDBData<
    */
   constructor(
     storesParameters: IDBStoresParameters<StoreNames>,
-    connection: {
-      name: DBName,
-      version: Version,
-    }
+    connection: IDBConnectionSettings<DBName, Version>
   )
   constructor(
     storesParameters: IDBStoresParameters<StoreNames>,
