@@ -30,16 +30,13 @@ const indexedDBWithShopAndParameters = IndexedDB.create<Shop, false>()({
   }
 });
 
-// Adding with Shop schema and data instance.
+// Adding with Shop schema with data instance consists of connection instance.
 // const indexedDBWithShopAndData: IndexedDB<IDBData<Shop, "test-db", "person" | "cart", 1>, Shop, "test-db", "person" | "cart", 1>
 const indexedDBWithShopAndData = IndexedDB.create<Shop, true>()(shopSchemaDBWithConnection);
 
-
-
-
 // Adding with raw schema and parameters.
 /*
-const schemaIndexedDB3: IndexedDB<IDBData<{
+const rawSchemaIndexedDB3: IndexedDB<IDBData<{
     person: {
         id: number;
         name: string;
@@ -59,7 +56,7 @@ const schemaIndexedDB3: IndexedDB<IDBData<{
     };
 }, "test-db", "person" | "cart", 1>
 */
-const schemaIndexedDB3 = IndexedDB.create(false, {
+const rawSchemaIndexedDB3 = IndexedDB.create(false, {
   person: { id: 'number', name: 'string' },
   cart: { id: 'number', items: { array: 'string' } },
 })({
@@ -83,9 +80,9 @@ const schemaIndexedDB3 = IndexedDB.create(false, {
   }
 });
 
-// Adding with raw schema and data instance.
+// Adding with raw schema and data instance consists of raw schema and connection instance.
 /*
-const schemaIndexedDB4: IndexedDB<IDBData<{
+const rawSchemaIndexedDBWithDataAndConnection: IndexedDB<IDBData<{
     person: {
         id: number;
         name: string;
@@ -105,7 +102,7 @@ const schemaIndexedDB4: IndexedDB<IDBData<{
     };
 }, "test-db", "person" | "cart", 1>
 */
-const schemaIndexedDB4 = IndexedDB.create(true, {
+const rawSchemaIndexedDBWithDataAndConnection = IndexedDB.create(true, {
   person: { id: 'number', name: 'string' },
   cart: { id: 'number', items: { array: 'string' } },
 })(rawSchemaDBwithConnection);
@@ -128,7 +125,7 @@ const indexedDBWithParameters = new IndexedDB({
 });
 
 
-// Creating with only parameters via constructor.
+// Creating IndexedDB instance with data instance consists of Shop schema and connection instance.
 // const indexedDBWithData: IndexedDB<IDBData<Shop, "test-db", "person" | "cart", 1>, IDBSchema, "test-db", "person" | "cart", 1>
 const indexedDBWithData = new IndexedDB(shopSchemaDBWithConnection);
 

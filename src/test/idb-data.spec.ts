@@ -96,7 +96,7 @@ export const rawSchemaDBwithParameters = IDBData.create(false, {
   }
 );
 
-// Initialize the database with raw schema and connection parameters.
+// Initialize the database with raw schema and connection instance.
 /*
 const rawSchemaDBwithConnection: IDBData<{
     person: {

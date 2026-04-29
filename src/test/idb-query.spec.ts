@@ -61,7 +61,7 @@ const shopSchemaQueryWithParameters = IDBQuery.create<Shop, false>()({
   },
 );
 
-// Query providing raw schema with parameters
+// Query providing raw schema with data instance instantiated with parameters
 /*
 const rawSchemaQueryWithParameters: IDBQuery<IDBData<{
     person: {
@@ -105,7 +105,7 @@ const rawSchemaQueryWithParameters = IDBQuery.create(true, {
   rawSchemaDBwithParameters
 );
 
-// Query providing raw schema with data instance
+// Query providing raw schema with data instance consists of Shop schema and connection instance
 /*
 const rawSchemaQueryWithData: IDBQuery<IDBData<{
     person: {
@@ -149,7 +149,7 @@ const rawSchemaQueryWithData = IDBQuery.create(true, {
   rawSchemaDBwithConnection
 );
 
-// Creates a query with data instance with Shop schema
+// Creates a query with data instance consists of Shop schema and connection instance
 /*
 const idbQuery: IDBQuery<IDBData<Shop, "test-db", "person" | "cart", 1>, {
     person: {
