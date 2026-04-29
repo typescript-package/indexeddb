@@ -100,12 +100,12 @@ export class IDBQuery<
   constructor(
     query?: IDBStoreQuery<NoInfer<Schema>, StoreNames>,
     options?: IDBQueryTransactionOptions,
-    settings?: IDBSettings<DBName, StoreNames, Version>
+    settings?: IDBSettings<DBName, StoreNames, Version> & { schema?: Schema }
   )
   constructor(
     query?: IDBStoreQuery<NoInfer<Schema>, StoreNames>,
     options?: IDBQueryTransactionOptions,
-    settings?: IDBSettingsWithConnection<DBName, StoreNames, Version>
+    settings?: IDBSettingsWithConnection<DBName, StoreNames, Version> & { schema?: Schema }
   )
   constructor(
     query?: IDBStoreQuery<NoInfer<Schema>, StoreNames>,
