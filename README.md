@@ -22,10 +22,10 @@ A **TypeScript** wrapper for IndexedDB client-side storage.
   - Abstract
     - `DBConnection`
   - Class
-    - `IDBConnection`
-    - `IDBData`
-    - `IDBQuery`
-    - `IndexedDB`
+    - [`IDBConnection`](#idbconnection)
+    - [`IDBData`](#idbdata)
+    - [`IDBQuery`](#idbquery)
+    - [`IndexedDB`](#indexeddb)
 - [Contributing](#contributing)
 - [Support](#support)
 - [Code of Conduct](#code-of-conduct)
@@ -51,6 +51,8 @@ import {
   IDBData,
   IDBQuery,
   IndexedDB,
+  // Schema
+  Schema
 } from '@typescript-package/indexeddb';
 ```
 
