@@ -28,7 +28,7 @@ export class IDBQuery<
   DataInstance extends IDBData<Schema, DBName, StoreNames, Version>,
   Schema extends IDBSchema = DataInstance extends IDBData<infer S, any, any, any> ? S : IDBSchema,
   DBName extends string = DataInstance extends IDBData<Schema, infer N, any, any> ? N : string,
-  StoreNames extends keyof Schema & string = DataInstance extends IDBData<Schema, any, infer S, any> ? S : keyof Schema & string,
+  StoreNames extends keyof Schema & string = keyof Schema & string,
   Version extends number = DataInstance extends IDBData<Schema, any, any, infer V> ? V : number
 > {
   public static create<Schema extends IDBSchema, DataType extends boolean = true>(
@@ -36,7 +36,7 @@ export class IDBQuery<
   ): <
       DataInstance extends IDBData<Schema, DBName, StoreNames, Version>,
       DBName extends string = DataInstance extends IDBData<Schema, infer N, any, any> ? N : string,
-      StoreNames extends keyof Schema & string = DataInstance extends IDBData<Schema, any, infer S, any> ? S : keyof Schema & string,
+      StoreNames extends keyof Schema & string = DataInstance extends IDBData<Schema, any, infer S, any> ? 'a' : keyof Schema & string,
       Version extends number = DataInstance extends IDBData<Schema, any, any, infer V> ? V : number
     >(
       query?: IDBStoreQuery<Schema, StoreNames>,
