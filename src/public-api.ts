@@ -5,5 +5,7 @@ export {
   IDBConnection,
   IDBData,
   IDBQuery,
-  IndexedDB
+  IndexedDB,
+  // Schema
+  Schema
 } from './lib';
