@@ -11,21 +11,23 @@ import type {
 } from '@typedly/indexeddb';
 // Type.
 import type { IDBStoresParameters, IDBSchema, IDBConnectionSettings } from '@typedly/indexeddb';
-import type { SchemaRecordToType } from '@typedly/schema';
+import type { SchemaRecordToType, SchemaToType } from '@typedly/schema';
+import { Schema } from './schema.class';
 /**
  * @description Class with opened connection (IDBConnection), to handle transaction and store.
  * @export
  * @class IDBData
- * @template {IDBSchema} Schema 
+ * @template {IDBSchema} S 
  * @template {string} [DBName=string] 
- * @template {keyof Schema & string} [StoreNames=keyof Schema & string] 
+ * @template {keyof S & string} [StoreNames=keyof S & string] 
  * @template {number} [Version=number] 
  */
 export class IDBData<
-  Schema extends IDBSchema,
+  S extends RawSchema extends IDBSchema ? SchemaRecordToType<RawSchema> : IDBSchema,
   DBName extends string = string,
-  StoreNames extends keyof Schema & string = keyof Schema & string,
+  StoreNames extends keyof S & string = keyof S & string,
   Version extends number = number,
+  const RawSchema extends IDBSchema | undefined = undefined,
 > {
   public static create<const RawSchema extends IDBSchema, T extends boolean = false>(
     dataType: T,
@@ -39,7 +41,8 @@ export class IDBData<
     storesParameters: IDBStoresParameters<StoreNames>,
     connection: T extends true
       ? IDBConnection<DBName, Version>
-      : { name?: DBName; version?: Version },
+      : IDBConnectionSettings<DBName, Version>,
+    schema?: Schema
   ) => IDBData<Schema, DBName, StoreNames, Version>;
 
   public static create<Schema extends IDBSchema, T extends boolean = false>(): <
@@ -50,12 +53,13 @@ export class IDBData<
     storesParameters: IDBStoresParameters<StoreNames>,
     connection: T extends true
       ? IDBConnection<DBName, Version>
-      : { name?: DBName; version?: Version },
+      : IDBConnectionSettings<DBName, Version>,
+    schema?: Schema
   ) => IDBData<Schema, DBName, StoreNames, Version>;
 
   public static create(schema?: IDBSchema) {
-    return (storesParameters: any, connection: any) =>
-      new IDBData(storesParameters, connection);
+    return (storesParameters: any, connection: any, schema?: any) =>
+      new IDBData(storesParameters, connection, schema);
   }
 
   public static createStore<
@@ -97,6 +101,16 @@ export class IDBData<
    * @description
    * @public
    * @readonly
+   * @type {S}
+   */
+  public get schema() {
+    return this.#schema;
+  }
+
+  /**
+   * @description
+   * @public
+   * @readonly
    * @type {IDBStoresParameters<StoreNames>}
    */
   public get storesParameters() {
@@ -108,6 +122,12 @@ export class IDBData<
    * @type {!IDBConnection<DBName, Version>}
    */
   #connection!: IDBConnection<DBName, Version>;
+
+  /**
+   * @description
+   * @type {?IDBSchema}
+   */
+  #schema?: RawSchema extends IDBSchema ? Schema<RawSchema> : undefined;
 
   /**
    * @description
@@ -124,15 +144,27 @@ export class IDBData<
    */
   constructor(
     storesParameters: IDBStoresParameters<StoreNames>,
-    connection: IDBConnectionSettings<DBName, Version>
+    connection: IDBConnectionSettings<DBName, Version>,
+    schema?: {
+      raw?: RawSchema,
+      schema?: S
+    }
   )
   constructor(
     storesParameters: IDBStoresParameters<StoreNames>,
-    connection: IDBConnection<DBName, Version>
+    connection: IDBConnection<DBName, Version>,
+    schema?: {
+      raw?: RawSchema,
+      schema?: S
+    }
   )
   constructor(
     storesParameters: IDBStoresParameters<StoreNames>,
-    connection: any
+    connection: any,
+    schema?: {
+      raw?: RawSchema,
+      schema?: S
+    }
   ) {
     this.#connection = connection instanceof IDBConnection
       ? connection
@@ -147,6 +179,7 @@ export class IDBData<
       onupgradeneeded: event => IDBData.createStores(this.#connection.database!, storesParameters),
     });
     this.#storesParameters = storesParameters;
+    this.#schema = schema?.raw ? new Schema(schema.raw as RawSchema & IDBSchema) as any : undefined;
   }
 
   public async objectStores<Names extends StoreNames & string>(
